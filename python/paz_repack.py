@@ -193,6 +193,101 @@ def _find_xml_comments(data: bytes) -> list[tuple[int, int]]:
     return comments
 
 
+def _make_incompressible(length: int) -> bytes:
+    """Generate incompressible byte content for padding comments."""
+    # Cycle through printable ASCII that won't form LZ4 matches
+    out = bytearray(length)
+    for i in range(length):
+        out[i] = 33 + ((i * 7 + i // 3) % 93)  # varied printable ASCII
+    return bytes(out)
+
+
+def _inflate_with_comments(padded: bytes, plaintext_len: int,
+                           target_comp_size: int,
+                           target_orig_size: int) -> bytes | None:
+    """Insert XML comments with incompressible content to inflate compressed size.
+
+    First tries replacing trailing padding with a new <!-- ... --> comment.
+    If there's not enough trailing room, expands existing comment bodies
+    by replacing their content with less compressible bytes.
+
+    Returns adjusted data or None if it can't hit the target.
+    """
+    # Strategy 1: new comment in trailing padding
+    padding_room = target_orig_size - plaintext_len
+    if padding_room >= 7:
+        max_body = padding_room - 7
+        lo, hi = 0, max_body
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            body = _make_incompressible(mid)
+            comment = b'<!--' + body + b'-->'
+            trial = padded[:plaintext_len] + comment
+            if len(trial) < target_orig_size:
+                trial = trial + b'\x00' * (target_orig_size - len(trial))
+            else:
+                trial = trial[:target_orig_size]
+            c = lz4.block.compress(trial, store_size=False)
+            if len(c) == target_comp_size:
+                return trial
+            elif len(c) < target_comp_size:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+
+        for n in range(max(0, lo - 20), min(lo + 20, max_body + 1)):
+            body = _make_incompressible(n)
+            comment = b'<!--' + body + b'-->'
+            trial = padded[:plaintext_len] + comment
+            if len(trial) < target_orig_size:
+                trial = trial + b'\x00' * (target_orig_size - len(trial))
+            else:
+                trial = trial[:target_orig_size]
+            c = lz4.block.compress(trial, store_size=False)
+            if len(c) == target_comp_size:
+                return trial
+
+    # Strategy 2: replace content inside existing comments with
+    # incompressible bytes to inflate compressed size
+    comments = _find_xml_comments(padded)
+    if not comments:
+        return None
+
+    # Sort by size descending — largest comments give most room to tune
+    comments.sort(key=lambda c: c[1] - c[0], reverse=True)
+
+    for cstart, cend in comments:
+        body_len = cend - cstart
+        if body_len < 1:
+            continue
+
+        # Binary search: replace N bytes of comment body with incompressible
+        lo, hi = 0, body_len
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            trial = bytearray(padded)
+            fill = _make_incompressible(mid)
+            trial[cstart:cstart + mid] = fill
+            c = lz4.block.compress(bytes(trial), store_size=False)
+            if len(c) == target_comp_size:
+                return bytes(trial)
+            elif len(c) < target_comp_size:
+                lo = mid + 1
+            else:
+                hi = mid - 1
+
+        # Linear scan near boundary
+        for n in range(max(0, lo - 20), min(lo + 20, body_len + 1)):
+            trial = bytearray(padded)
+            fill = _make_incompressible(n)
+            trial[cstart:cstart + n] = fill
+            c = lz4.block.compress(bytes(trial), store_size=False)
+            if len(c) == target_comp_size:
+                return bytes(trial)
+
+    return None
+
+
 def _match_compressed_size(plaintext: bytes, target_comp_size: int,
                            target_orig_size: int) -> bytes:
     """Adjust plaintext so it compresses to exactly target_comp_size.
@@ -286,6 +381,15 @@ def _match_compressed_size(plaintext: bytes, target_comp_size: int,
             c = lz4.block.compress(bytes(trial), store_size=False)
             if len(c) == target_comp_size:
                 return bytes(trial)
+
+    # Phase 5: inflate compressed size by inserting XML comments with
+    # incompressible content into the trailing padding region.
+    # Used when the modified file compresses smaller than the target.
+    if delta < 0:
+        result = _inflate_with_comments(padded, len(plaintext),
+                                        target_comp_size, target_orig_size)
+        if result is not None:
+            return result
 
     raise ValueError(
         f"Cannot match target comp_size {target_comp_size} "
